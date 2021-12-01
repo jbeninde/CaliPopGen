@@ -10,4 +10,4 @@ facilitate explorations of ecological patterns and processes across the varied g
 and marine ecoregions of California and has a greater density of species and georeferenced populations than any previously published
 population genetic database, and is uniquely suited to inform conservation management at the regional and state levels across taxonomic
 groups.
-The information shared in this repository is the code that was used to generate the figures used to describe the dataset in the first publication in 2022
+The information shared here is the code used to generate the figures that describe the dataset in the first publication in 2022.
