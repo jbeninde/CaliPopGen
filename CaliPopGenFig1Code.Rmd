@@ -1,0 +1,79 @@
+---
+title: "PopGenDataSummaryFiguresCode"
+date: Dec 16 2021
+output: html_document
+---
+
+Code used to generate Figure 1.
+
+#Workspace Setup
+##Load packages
+```{r setup, include=FALSE}
+library(readxl)
+library(stringr)
+library(tidyr)
+library(tidyselect)
+library(dplyr)
+library(ggplot2)
+library(webr)
+library(moonBook)
+library(ggforce)
+library(grid)
+library(RColorBrewer)
+library(gridExtra)
+source("PieDonutFunctions.R") #load slightly edited piedonut function https://github.com/etoff/PieDonutEMT
+
+
+```
+
+
+#Figure 1: Taxonomic breakdown of species represented in the CaliPopGen database. Values in parentheses represent the total number of species as a percentage of the number of unique species in the database.
+Note that group labels in this plot collide, so EMT manually moved labels in post-processing using adobe illustrator. 
+
+##Read-in database
+```{r}
+mydata<-read.delim("2021-12-14_PopGen_SciData.tsv", header = T, na.strings =  "<NA>")
+
+```
+##Tidy, summarize and plot data
+```{r}
+entrybyspecies<- mydata %>% 
+  group_by(Kingdom, TaxonGroup) %>%
+  summarise(n = n_distinct(EntryID))
+entrybyspecies$prop<-(entrybyspecies$n/sum(entrybyspecies$n)*100)
+
+# Get count of unique species for each Kingdom
+speciesbynewtaxonomy.king<-  mydata %>% 
+    group_by(Kingdom, TaxonGroup) %>%
+    summarise(n=n_distinct(ScientificName))
+
+# calculate percentage
+speciesbynewtaxonomy.king$Percentage = round(100*(speciesbynewtaxonomy.king$n/sum(speciesbynewtaxonomy.king$n)), digits = 1)
+
+# make a new TaxonGroup column and condense small groups to "Other" category
+speciesbynewtaxonomy.king$TaxonGroupPlot<-speciesbynewtaxonomy.king$TaxonGroup
+speciesbynewtaxonomy.king$TaxonGroupPlot[speciesbynewtaxonomy.king$Percentage < 1 ] <- "Other"
+
+# re-summarize
+speciesbynewtaxonomy.king<-speciesbynewtaxonomy.king %>%
+      group_by(Kingdom, TaxonGroupPlot) %>%
+      summarise(Percentage=sum(Percentage), n = sum(n))
+
+# make nice plotting words
+speciesbynewtaxonomy.king$group.perc<-paste0(speciesbynewtaxonomy.king$TaxonGroupPlot, ": ", speciesbynewtaxonomy.king$Percentage, "%" )
+
+# sort for plotting order
+speciesbynewtaxonomy.king<-arrange(speciesbynewtaxonomy.king, TaxonGroupPlot, Percentage)
+#speciesbynewtaxonomy.king$group.perc<-factor(speciesbynewtaxonomy.king$group.perc, levels = speciesbynewtaxonomy.king$group.perc)
+
+
+```
+##Plot
+```{r, echo = F}
+#pdf(file = "Figure1.raw.pdf")
+PieDonut2(speciesbynewtaxonomy.king, mapping = aes(pies = Kingdom, donuts =TaxonGroupPlot, count = n ), labelposition=1, showRatioThreshold = 0, donutLabelSize = 2, pieLabelSize = 3, showPieName =  F, showRatioDonut = T, labelpositionThreshold =1, ratioByGroup = F, explodeDonut = F, color = 'white', pieCols = c("#377EB8", "#999999", "#A65628", "#4DAF4A"))
+#dev.off()
+
+#Note that group labels in this plot collide, so EMT manually moved labels in post-processing using adobe illustrator. 
+
+```

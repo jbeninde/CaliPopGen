@@ -1,0 +1,144 @@
+---
+title: "CaliPopGenSciDataFigure2Code"
+output: html_document
+---
+
+Code used to generate Figure 2.
+
+#Figure 2. The six predominant marker types included in the CaliPopGen database show different usage trends through time.
+
+#Workspace Setup
+##Load packages
+```{r setup, include=FALSE}
+library(readxl)
+library(stringr)
+library(tidyr)
+library(tidyselect)
+library(dplyr)
+library(ggplot2)
+library(ggforce)
+library(grid)
+library(RColorBrewer)
+library(gridExtra)
+
+
+```
+##Read-in database
+```{r}
+mydata<-read.delim("2021-12-14_PopGen_SciData.tsv", header = T, na.strings =  "<NA>")
+###Citation information
+cits<-read_xlsx("CitationsInFinalDB.xlsx", sheet = "Citations")
+
+##Extract publication data from citation
+cits$pubyear<-str_sub(cits$FullCitation, start = -6, end = -3)
+
+##Assign publication date to each entry in popgen database
+mydata$pubyear<-as.numeric(cits$pubyear[match(mydata$CitationID, cits$CitationID)])
+
+##Assign unique citation + population identifier
+mydata$citpop<-paste(mydata$CitationID, mydata$PopName)
+
+```
+
+###Tidy data
+```{r}
+#combine a few types and make nice categories for the major marker types. 
+mydata$MarkerTypeMajor[mydata$MarkerType == c("Microsatellite")] <- "Microsatellite"
+mydata$MarkerTypeMajor[mydata$MarkerType %in% c("mtDNA")] <- "Mitochondrial"
+mydata$MarkerTypeMajor[mydata$MarkerType %in% c("Allozyme", "Isozyme")] <- "Allozyme or Isozyme"
+mydata$MarkerTypeMajor[mydata$MarkerType %in% c("AFLP", "RFLP")] <- "AFLP or RFLP"
+mydata$MarkerTypeMajor[mydata$MarkerType %in% c("nDNA")] <- "Nuclear"
+mydata$MarkerTypeMajor[mydata$MarkerType %in% c("SNP")] <- "SNP"
+mydata$MarkerTypeMajor[mydata$MarkerType %in% c("RAD")] <- "RAD"
+mydata$MarkerTypeMajor[is.na(mydata$MarkerTypeMajor)]<- "other"
+
+
+citbymarker<-  mydata %>% 
+    group_by(MarkerTypeMajor, pubyear) %>%
+    summarise(n=n_distinct(CitationID))
+
+colors.hist<-brewer.pal(6, "Set1")
+
+```
+
+###Plot
+```{r, echo=F, warning = F}
+## can set a different width for all plots, if desired. 
+width=0.75
+
+## generate plot for each marker type
+flps.bghist<-ggplot(citbymarker, aes(x =  pubyear, y = n)) +
+  geom_col(data=citbymarker,  aes(x =  pubyear, y = n), fill = "grey",col = "grey", width = width)+
+  geom_col(data= subset(citbymarker,  MarkerTypeMajor %in% "AFLP or RFLP"), aes(fill = colors.hist[1]), alpha = .7, show.legend = FALSE)+
+  xlim(c(1980, 2019))+
+  xlab("Year of Publication") + ylab("Count of Studies Published")+
+  ggtitle("AFLP or RFLP")+
+  theme_light()+
+  theme(axis.title=element_text(size=10), plot.title = element_text(size=10,face="bold"))
+
+zyme.bghist<-ggplot(citbymarker, aes(x =  pubyear, y = n)) +
+  geom_col(data=citbymarker,  aes(x =  pubyear, y = n), fill = "grey",  col = "grey", width = width)+
+  geom_col(data= subset(citbymarker,  MarkerTypeMajor %in% "Allozyme or Isozyme"), fill = colors.hist[2], alpha = .7, show.legend = FALSE)+
+  xlim(c(1980, 2019))+
+  xlab("Year of Publication") + ylab("Count of Studies Published")+
+  ggtitle("Allozyme or Isozyme")+
+  theme_light()+
+  theme(axis.title=element_text(size=10), plot.title = element_text(size=10,face="bold"))
+
+
+msat.bghist<-ggplot(citbymarker, aes(x =  pubyear, y = n)) +
+  geom_col(data=citbymarker,  aes(x =  pubyear, y = n), fill = "grey",  col = "grey", width = width)+
+  geom_col(data= subset(citbymarker,  MarkerTypeMajor %in% "Microsatellite"), fill = colors.hist[3], alpha = .7, show.legend = FALSE)+
+  xlim(c(1980, 2019))+
+  xlab("Year of Publication") + ylab("Count of Studies Published")+
+  ggtitle("Microsatellite")+
+  theme_light()+
+  theme(axis.title=element_text(size=10), plot.title = element_text(size=10,face="bold"))
+
+mtdna.bghist<-ggplot(citbymarker, aes(x =  pubyear, y = n)) +
+  geom_col(data=citbymarker,  aes(x =  pubyear, y = n), fill = "grey",  col = "grey", width = width)+
+  geom_col(data= subset(citbymarker,  MarkerTypeMajor %in% "Mitochondrial"), fill = colors.hist[4], alpha = .7, show.legend = FALSE)+
+  xlim(c(1980, 2019))+
+  xlab("Year of Publication") + ylab("Count of Studies Published")+
+  ggtitle("Mitochondrial")+
+  theme_light()+
+  theme(axis.title=element_text(size=10), plot.title = element_text(size=10,face="bold"))
+
+ndna.bghist<-ggplot(citbymarker, aes(x =  pubyear, y = n)) +
+  geom_col(data=citbymarker,  aes(x =  pubyear, y = n), fill = "grey",  col = "grey", width = width)+
+  geom_col(data= subset(citbymarker,  MarkerTypeMajor %in% "Nuclear"), fill = colors.hist[5], alpha = .7, show.legend = FALSE)+
+  xlim(c(1980, 2019))+
+  xlab("Year of Publication") + ylab("Count of Studies Published")+
+  ggtitle("Nuclear")+
+  theme_light()+
+  theme(axis.title=element_text(size=10), plot.title = element_text(size=10,face="bold"))
+
+rad.bghist<-ggplot(citbymarker, aes(x =  pubyear, y = n)) +
+  geom_col(data=citbymarker,  aes(x =  pubyear, y = n), fill = "grey",  col = "grey", width = width)+
+  geom_col(data= subset(citbymarker,  MarkerTypeMajor %in% "RAD"), fill = colors.hist[6], alpha = .7, show.legend = FALSE, width = 1)+
+  xlim(c(1980, 2019))+
+  xlab("Year of Publication") + ylab("Count of Studies Published")+
+  ggtitle("RAD")+
+  theme_light()+
+  theme(axis.title=element_text(size=10), plot.title = element_text(size=10,face="bold"))
+
+#not used.
+# snp.bghist<-ggplot(citbymarker, aes(x =  pubyear, y = n)) +
+#   geom_col(data=citbymarker,  aes(x =  pubyear, y = n), fill = "grey",  col = "grey", width = width)+
+#   geom_col(data= subset(citbymarker,  MarkerTypeMajor %in% "SNP"), fill = colors.hist[6], alpha = .7, show.legend = FALSE)+
+#   xlim(c(1980, 2019))+
+#   xlab("Year of Publication") + ylab("Count of Studies Published")+
+#   ggtitle("SNP")+
+#   theme_light()+
+#   theme(axis.title=element_text(size=10), plot.title = element_text(size=10,face="bold"))
+
+grid.arrange(flps.bghist, zyme.bghist, msat.bghist, mtdna.bghist, ndna.bghist, rad.bghist)
+
+# #make a paneled plot
+# pdf(file = "Figure2.pdf")
+# grid.arrange(flps.bghist, zyme.bghist, msat.bghist, mtdna.bghist, ndna.bghist, rad.bghist)
+# dev.off
+
+
+
+```
