@@ -1,0 +1,149 @@
+---
+title: "2022-01-11_CaliPopGen_GitHub_Figure4"
+author: "JBeninde"
+date: "11 01 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(rgdal)
+library(raster)
+library(rgeos)
+library(sp)
+
+```
+
+
+## Load CaliPopGen and spatial data
+
+Additional data is necessary to run this code and can be downloaded at URLs provided below. To run this code, download this data along with CaliPopGen dataset 1 & 2 into the same folder and replace the path in the code chunks below.
+
+The California state border is provided by the California Government Operations Agency here: https://data.ca.gov/dataset/e212e397-1277-4df3-8c22-40721b095f33/resource/3db1e426-fb51-44f5-82d5-a54d7c6e188b/download/ca-state-boundary.zip
+
+The ecoregions for California are available here: https://databasin.org/datasets/81a3a809a2ae4c099f2e495c0b2ecc91/
+
+Please note that the files created here were postprocessed using QGIS and affinity photo to create Figure 4 as it appears in the publication. 
+
+```{r}
+
+popgen_raw =  read.delim("C:/CaliPopGen/2021-12-14_PopGen_SciData.tsv")
+
+popgen = popgen_raw
+popgen = popgen[!is.na(as.numeric(popgen$LatitudeDD)),]
+popgen = popgen[!is.na(as.numeric(popgen$LongitudeDD)),]
+popgen$CitationID_PopName  = paste0(popgen$CitationID, popgen$PopName)
+popgen = popgen[!duplicated(popgen$CitationID_PopName),]
+popgen$LatitudeDD = as.numeric(popgen$LatitudeDD)
+popgen$LongitudeDD = as.numeric(popgen$LongitudeDD)
+coordinates(popgen)<-~LongitudeDD+LatitudeDD
+proj4string(popgen) <- crs("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+
+pairwise_raw = read.delim("C:/CaliPopGen/CaliPopGen_dataset_2_population_genetic_differentiation_TSV.tsv")
+
+CA_border = readOGR("C:/CaliPopGen/ca-state-boundary/CA_State_TIGER2016.shp")
+CA_border <- spTransform(CA_border, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+CA_border_UTM <- spTransform(CA_border, CRS("+proj=utm +zone=10N +datum=WGS84"))
+
+raster_20km <- raster(xmn = bbox(CA_border_UTM)[1]-250000, xmx = bbox(CA_border_UTM)[3], ymn = bbox(CA_border_UTM)[2], ymx = bbox(CA_border_UTM)[4], res = c(20000,20000))
+
+ecoregion_GDB = "C:/CaliPopGen/USDA Ecoregion Sections, California/data/v10/ecoregionscalifornia07_3.gdb"
+GDB_list = ogrListLayers(ecoregion_GDB) 
+ecoregions = readOGR(dsn=ecoregion_GDB,layer="EcoregionsCalifornia07_3_Sections_CAClip") 
+
+```
+
+
+## All populations of dataset 1 & 2 for panel A of Figure 4
+
+```{r}
+
+pairwise_pop1 = pairwise_raw[,c("Pop1LongitudeDD","Pop1LatitudeDD")]
+pairwise_pop2 = pairwise_raw[,c("Pop2LongitudeDD","Pop2LatitudeDD")]
+popgen_pop = popgen_raw[,c("LongitudeDD","LatitudeDD")]
+colnames(pairwise_pop1) = c("long","lat")
+colnames(pairwise_pop2) = c("long","lat")
+colnames(popgen_pop) = c("long","lat")
+
+all = rbind(pairwise_pop1, pairwise_pop2, popgen_pop)
+all$long = as.numeric(all$long)
+all$lat = as.numeric(all$lat)
+all = all[complete.cases(all$long & all$lat),]
+
+write.csv(all, "C:/CaliPopGen/all_populations.csv")
+
+```
+
+
+## Quantify number of populations per ecoregion for panel B of Figure 4
+
+```{r}
+
+ecoregions <- spTransform(ecoregions, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+
+ecoregions_df = as.data.frame(ecoregions)
+ecoregions_df$species = NA
+ecoregions_df$populations = NA
+
+for (i in 1:nrow(ecoregions_df))
+{
+temp_poly = ecoregions@polygons[[i]]
+temp_poly = SpatialPolygons(list(temp_poly))
+temp_poly = as(temp_poly, "SpatialPolygonsDataFrame")
+proj4string(temp_poly) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+temp_data = popgen[temp_poly,]
+ecoregions_df[i,4] = length(unique(temp_data$ScientificName))
+ecoregions_df[i,5] = length(unique(temp_data$PopName))
+}
+
+```
+
+
+## Create raster for panel C of Figure 4 (unique populations of dataset 1)
+
+```{r}
+
+popgen <- spTransform(popgen, CRS("+proj=utm +zone=10N +datum=WGS84"))
+popgen_df = as.data.frame(popgen)
+
+popgen_raster = rasterize(x=popgen_df[,c("LongitudeDD","LatitudeDD")], y=raster_20km,   field=popgen_df[,"CitationID_PopName"], fun='count')
+
+writeRaster(popgen_raster,"C:/CaliPopGen/popgen_raster.asc")
+
+```
+
+
+## Create raster for panel D of Figure 4 (pairwise lines between populations of dataset 2)
+
+```{r}
+
+pairwise$Pop1LatitudeDD = as.numeric(pairwise$Pop1LatitudeDD)
+pairwise$Pop1LongitudeDD = as.numeric(pairwise$Pop1LongitudeDD)
+pairwise$Pop2LatitudeDD = as.numeric(pairwise$Pop2LatitudeDD)
+pairwise$Pop2LongitudeDD = as.numeric(pairwise$Pop2LongitudeDD)
+
+pairwise = as.data.frame(pairwise)
+
+raster_lines = raster_20km
+raster_lines[]=0
+
+for (i in 1:nrow(pairwise))
+ {
+  
+  line_obj <- Line(as.data.frame(matrix(c(pairwise[i,12],pairwise[i,18],pairwise[i,11],pairwise[i,17]), 2,2)))
+  lines_obj <- sp::Lines(list(line_obj),ID=1)
+  firstLine <- sp::SpatialLines(list(lines_obj))
+  proj4string(firstLine) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+  firstLine_UTM <- spTransform(firstLine, CRS("+proj=utm +zone=10N +datum=WGS84"))
+  raster_temp = rasterize(x=firstLine_UTM, y=raster_20km, field=1, background = 0)
+  raster_lines = raster_temp + raster_lines
+  
+}
+
+raster_lines[raster_lines==0] = NA
+writeRaster(raster_lines,"C:/CaliPopGen/PW_raster_lines.asc")
+
+```
+
