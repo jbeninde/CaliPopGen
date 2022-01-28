@@ -6,8 +6,6 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-
-knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(rgdal)
 library(raster)
@@ -21,11 +19,11 @@ library(sp)
 
 Additional data is necessary to run this code and can be downloaded at URLs provided below. To run this code, download this data along with CaliPopGen dataset 1 & 2 into the same folder and replace the path in the code chunks below.
 
-The California state border is provided by the California Government Operations Agency here: https://data.ca.gov/dataset/e212e397-1277-4df3-8c22-40721b095f33/resource/3db1e426-fb51-44f5-82d5-a54d7c6e188b/download/ca-state-boundary.zip
+The California state border is provided by the California Government Operations Agency: https://data.ca.gov/dataset/e212e397-1277-4df3-8c22-40721b095f33/resource/3db1e426-fb51-44f5-82d5-a54d7c6e188b/download/ca-state-boundary.zip
 
 The ecoregions for California are available here: https://databasin.org/datasets/81a3a809a2ae4c099f2e495c0b2ecc91/
 
-Please note that the files created here were postprocessed using QGIS and affinity photo to create Figure 4 as it appears in the publication. 
+Please note that the files created here were further postprocessed using QGIS and affinity photo to create Figure 4 as it appears in the publication. 
 
 ```{r}
 
