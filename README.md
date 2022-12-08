@@ -1,6 +1,6 @@
 # CaliPopGen
 
-CaliPopGen is a database containing population genetic data for native and naturalized eukaryotic species in California, USA (https://www.nature.com/articles/s41597-022-01479-z). It summarizes the published literature (1985 – 2020) for 5,453 unique populations with genetic data from more than 187,394 individuals and 448 species (513 including subspecies) across molecular markers including allozymes, RFLPs, microsatellites, mtDNA, and nDNA. Terrestrial
+CaliPopGen is a database containing population genetic data for native and naturalized eukaryotic species in California, USA. It summarizes the published literature (1985 – 2020) for 5,453 unique populations with genetic data from more than 187,394 individuals and 448 species (513 including subspecies) across molecular markers including allozymes, RFLPs, microsatellites, mtDNA, and nDNA. Terrestrial
 habitats accounted for the majority (46.4%) of the genetic data. Taxonomic groups with the greatest representation were Magnoliophyta (20.3%), Insecta (13.4%), and Actinopterygii
 (12.9%). CaliPopGen also makes available life-history data for most included species to
 enable analyses of the drivers of genetic diversity across the state. The large number of populations and wide taxonomic breadth will
